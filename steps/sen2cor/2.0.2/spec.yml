@@ -1,0 +1,53 @@
+identifier:
+  identifier: sen2cor
+  version: 2.0.2
+
+title: Sen2Cor
+abstract: |-
+  Applies ESA's Sentinel-2 Correction tool (Sen2Cor) to Sentinel-2 product(s).
+
+  Sen2Cor is a processor for Sentinel-2 Level 2A product generation and
+  formatting; it performs the atmospheric, terrain and cirrus correction of
+  top-of-atmosphere Level 1C input data. Sen2Cor creates bottom-of-atmosphere,
+  terrain- and cirrus-corrected reflectance images; additional aerosol optical
+  thickness, water vapor and scene classification maps and quality indicators
+  for cloud and snow probabilities. It outputs a Sentinel-2 Level 2A SAFE
+  archive containing JPEG-2000 images at 60, 20 and 10 m resolutions.
+
+  This step will pass through an already-processed Level 2A input product.
+keywords:
+- sentinel-2
+requests:
+  cpu: 4
+  memory: 12Gi
+  scratch_storage: 20Gi
+
+inputs:
+- identifier: S2_PRODUCT
+  title: Sentinel-2 product
+  abstract: Sentinel-2 Level 1C or 2A product directory or zip archive
+  min_occurs: 1
+  max_occurs: 1
+  format: SAFE
+
+parameters:
+- identifier: ENABLE_QI_DATA_FALLBACK
+  title: Enable blank quality data fallback mode
+  abstract: Enable creation of blank directory to allow certain old data to be processed.
+  data_type: Boolean
+  min_occurs: 0
+  max_occurs: 1
+  default_values: ["true"]
+- identifier: ENABLE_ZIP_OUTPUT
+  title: Enable ZIP output
+  abstract: ZIP output from container by default
+  data_type: Boolean
+  min_occurs: 0
+  max_occurs: 1
+  default_values: ["true"]
+
+outputs:
+- identifier: S2_L2A
+  abstract: Sentinel-2 Level 2A product directory, zip archive if ENABLE_ZIP_OUTPUT true (the default).
+  min_occurs: 1
+  format: SAFE

@@ -1,0 +1,65 @@
+identifier: s2-l2a-geotiff
+title: Combine all bands of an S-2 Level 2A product into a GeoTIFF file
+version: 1.2.0
+abstract: |-
+  Takes an MSIL2A image produced by Sen2Cor, and creates a Cloud-Optimised
+  GeoTIFF (BigTIFF) containing all bands up-sampled to 10m resolution.
+keywords:
+- sentinel2
+- cog
+requests:
+  cpu: 4
+  memory: 4Gi
+
+inputs:
+- identifier: INPUT
+  title: Sentinel-2 L2A product
+  abstract: Sentinel-2 Level 2A product directory or zip archive
+  min_occurs: 1
+  max_occurs: 1
+
+outputs:
+- identifier: S2_GEOTIFF
+  title: Full Sentinel-2 product in GeoTIFF format
+  abstract: |-
+    All bands of the input product, with 10m resolution, in Cloud-Optimised
+    GeoTIFF format.
+    
+    In the case of multi-granule S-2 products, a separate GeoTIFF is created
+    for each UTM zone.
+  min_occurs: 1
+  format: COG
+
+parameters:
+
+- identifier: COMPRESS
+  title: GeoTIFF compression
+  abstract: |-
+    The desired compression for the data in the GeoTIFF product. See
+    https://gdal.org/drivers/raster/cog.html for the available options.
+    
+    Default: DEFLATE
+  data_type: String
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: APPLY_OFFSET
+  title: Apply data offset
+  abstract: |-
+    If true, apply the radiometric data offset defined in the MTD_MSIL2A.xml
+    file to data bands. The offset is applied as a factor directly on the band.
+    
+    If false, the offset value is not applied, and actual data values will need
+    correction before valid processing.
+    
+    In both cases, the offset value is also tracked as a metadata field
+    `BOA_ADD_OFFSET` on each band.
+    
+    See the '04.00' processing baseline description on
+    https://sentinels.copernicus.eu/web/sentinel/technical-guides/sentinel-2-msi/processing-baseline
+    for further details.
+    
+    Default: true
+  data_type: Boolean
+  min_occurs: 0
+  max_occurs: 1

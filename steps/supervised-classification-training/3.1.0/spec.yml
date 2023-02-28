@@ -1,0 +1,178 @@
+identifier: supervised-classification-training
+title: Supervised Classification Training
+version: 3.1.0
+abstract: >-
+  Creates OTB trained random forest model from stack of input multi-band GeoTIFFs
+  and a provided ground-truth shapefile.
+
+keywords:
+  - sentinel-2
+  - classification
+  - geotiff
+  - ML
+requests:
+  cpu: 2
+  memory: 4Gi
+  scratch_storage: 500Gi # We might have a lot of input products
+
+inputs:
+  - identifier: INPUT
+    abstract: Multiband TIFF images to be used in training of the model.
+    min_occurs: 1
+    format: GEOTIFF
+
+  - identifier: MASK
+    abstract: Good/bad pixel masks, corresponding one-to-one with `INPUT`.
+    min_occurs: 1
+    format: GEOTIFF
+
+  - identifier: STATISTICS
+    abstract: |-
+      Band statistics for bands in all `INPUT` images. If given, entries must
+      correspond with `TRAINING_FEATURES` parameter.
+    min_occurs: 0
+    max_occurs: 1
+    format: XML
+
+  - identifier: GROUND_TRUTH_SHAPEFILE
+    abstract: Shapefile with spectral signature and classifications.
+    min_occurs: 0
+    max_occurs: 1
+    format: ZIP
+
+outputs:
+  - identifier: MODEL
+    abstract: Trained random forest model.
+    min_occurs: 1
+    max_occurs: 1
+    format: txt
+
+  - identifier: CONFUSION_MATRIX
+    abstract: Output file containing the confusion matrix or contingency table.
+    min_occurs: 1
+    max_occurs: 1
+    format: csv
+
+  - identifier: AUX_FILE
+    abstract: An auxiliary file to track the inputs and parameters used in generation of the model.
+    min_occurs: 1
+    max_occurs: 1
+    format: txt
+
+parameters:
+
+- identifier: TRAINING_SHAPEFILE_ATTR
+  title: Shapefile attribute containing training class identifier
+  abstract: |-
+    The attribute in the training data shapefile containing the classes to be
+    detected and matched in the `INPUT` images.
+  data_type: STRING
+  min_occurs: 1
+  max_occurs: 1
+  default_values: ["MC_ID"]
+
+- identifier: TRAINING_FEATURES
+  title: Features (bands) to be used in the training
+  abstract: |-
+    Space-separated list of band numbers (0-indexed) to be used when training 
+    the classifier. This set should reference some or all bands available in
+    the `INPUT` images and must have the same number of elements as the entries
+    in the `STATISTICS` XML file (if provided).
+    
+    Default: All bands of the s2-seagrass-normalisation:4.0.0 step.
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: MAX_DEPTH
+  title: Maximum depth of the tree
+  abstract: |-
+    The depth of the tree. A low value will likely underfit and conversely
+    a high value will likely overfit. The optimal value can be obtained
+    using cross validation or other suitable methods.
+    
+    Default: 5
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: MIN_SAMPLES
+  title: Minimum number of samples in each node
+  abstract: |-
+    If the number of samples in a node is smaller than this parameter, then
+    the node will not be split. A reasonable value is a small percentage of
+    the total data e.g. 1 percent.
+    
+    Default: 10
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: REGRESSION_ACCURACY
+  title: Termination criteria for regression tree
+  abstract: |-
+    If all absolute differences between an estimated value in a node and the
+    values of the train samples in this node are smaller than this regression
+    accuracy parameter, then the node will not be split.
+    
+    Default: 0
+  data_type: FLOAT
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: CATEGORICAL_CLUSTERS
+  title: Categorical clusters
+  abstract: |-
+    Cluster possible values of a categorical variable into K <= cat clusters to
+    find a suboptimal split.
+    
+    Default: 10
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: SUBSET_SIZE
+  title: Size of the randomly selected subset of features at each tree node
+  abstract: |-
+    The size of the subset of features, randomly selected at each tree node,
+    that are used to find the best split(s). If you set it to 0, then the
+    size will be set to the square root of the total number of features.
+    
+    Default: 0
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: MAX_TREES
+  title: Maximum number of trees in the forest
+  abstract: |-
+    The maximum number of trees in the forest. Typically, the more trees you
+    have, the better the accuracy. However, the improvement in accuracy
+    generally diminishes and reaches an asymptote for a certain number of
+    trees. Also to keep in mind, increasing the number of trees increases
+    the prediction time linearly.
+    
+    Default: 100
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: SUFFICIENT_ACCURACY
+  title: Sufficient accuracy (OOB error)
+  abstract: |-
+    Sufficient accuracy (OOB error).
+    
+    Default: 0.01
+  data_type: FLOAT
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: RANDOM_SEED
+  title: Random seed
+  abstract: |-
+    A seed for random number generation. Used in the OTB applications
+    SampleSelection and TrainVectorClassifier. If set, the same seed is used in
+    both applications. If not set, each seed is chosen randomly.
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1

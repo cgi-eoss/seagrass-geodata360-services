@@ -1,0 +1,174 @@
+identifier: s2-seagrass-normalisation
+version: 2.0.5
+title: "Sentinel-2 seagrass normalisation service"
+abstract: |-
+  A workflow taking a Sentinel-2 L1C SAFE product, applying a standard set of
+  normalisation techniques, and producing analysis-ready data.
+  
+  The output is provided in Cloud-Optimised GeoTIFF format at 10m resolution,
+  and is generated with:
+
+  - L2A atmospheric correction and scene classification (sen2cor)
+  - additional habitat suitability model band (HSM)
+  - additional bathymetry band (BATHY)
+  
+  Also computed outputs are a cloud mask and stack image statistics, suitable
+  for use with the supervised-classification-training step.
+keywords:
+- sentinel2
+- normalisation
+- geotiff
+- cog
+
+inputs:
+
+- identifier: S2_L1C
+  title: Sentinel-2 L1C
+  abstract: Sentinel-2 level 1C product.
+  min_occurs: 1
+  max_occurs: 1
+  format: SAFE
+
+outputs:
+
+- identifier: S2_GEOTIFF
+  title: Normalised Sentinel-2 product in GeoTIFF format
+  abstract: |-
+    All bands of the input product, plus additional seagrass-relevant bands,
+    with 10m resolution, in Cloud-Optimised GeoTIFF format.
+  format: COG
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: s2-seagrass-normalisation, output_identifier: S2_GEOTIFF } ]
+
+- identifier: MASK
+  title: Cloud mask for the product
+  abstract: |-
+    Binary masks of each output product, to help deselect cloud, cloud shadow,
+    and other unwanted pixels.
+  format: GEOTIFF
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: s2-seagrass-normalisation, output_identifier: MASK } ]
+
+parameters:
+
+- identifier: NODATA_MASK_BAND
+  title: Image bandname containing 0 values to indicate nodata
+  abstract: |-
+    A band name from the INPUT images in which 0 values indicate nodata for
+    all bands in the image, i.e. a mask.
+    
+    Default: SCL
+  data_type: String
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: MASK_EXPRESSION
+  title: Cloud mask expression
+  abstract: |-
+    Custom bandmaths to be applied to the output product to generate a mask
+    product. This argument is provided to gdal_calc.py, and bands are selected
+    A..Z based on their index in the product.
+    
+    For example, to use the SCL band (`O`) to select only water pixels less
+    than 10 metres deep (bathymetry band `S`), where the CLD band (`N`) with a
+    threshold:
+    ```
+    (O==6) & (S<10) & (N<5)
+    ```
+  data_type: String
+  min_occurs: 0
+  max_occurs: 1
+  default_values: ["(O==6) & (S<10) & (N<5)"]
+
+- identifier: UNSCALE
+  title: Unscale output
+  abstract: |-
+    If true, the output GeoTIFF will be 'unscaled' - any configured data offset
+    or scale will be applied to the data values directly in the output.
+    Negative values will be clipped to 0.
+    
+    Default: true
+  data_type: Boolean
+  min_occurs: 0
+  max_occurs: 1
+  default_values: ["true"]
+
+step_configurations:
+
+# Atmospheric correction to L2A
+- identifier: sen2cor
+  step:
+    identifier: sen2cor
+    version: 2.0.2
+  input_links:
+  - identifier: S2_PRODUCT
+    sources:
+      workflow_inputs: [ S2_L1C ]
+  parameter_links:
+  - identifier: ENABLE_QI_DATA_FALLBACK
+    hardcoded_value: [ "true" ]
+  - identifier: ENABLE_ZIP_OUTPUT
+    hardcoded_value: [ "true" ]
+
+# Seagrass habitat suitability index, normalised to product geometry
+- identifier: habitat-suitability-model
+  step:
+    identifier: habitat-suitability-model
+    version: 1.1.0
+  input_links:
+  - identifier: S2_PRODUCT
+    sources:
+      workflow_inputs: [ S2_L1C ]
+
+# Bathymetry, normalised to product geometry
+- identifier: bathymetry
+  step:
+    identifier: bathymetry
+    version: 1.1.0
+  input_links:
+  - identifier: S2_PRODUCT
+    sources:
+      workflow_inputs: [ S2_L1C ]
+
+# S-2 L2A product converted to GeoTIFF
+- identifier: s2-l2a-geotiff
+  step:
+    identifier: s2-l2a-geotiff
+    version: 1.2.0
+  input_links:
+  - identifier: INPUT
+    sources:
+      step_outputs:
+      - step_identifier: sen2cor
+        output_identifier: S2_L2A
+
+# All layers merged to a single multi-band GeoTIFF
+- identifier: s2-seagrass-normalisation
+  step:
+    identifier: s2-seagrass-normalisation
+    version: 4.0.3
+  input_links:
+  - identifier: S2_L2A
+    sources:
+      step_outputs:
+      - step_identifier: s2-l2a-geotiff
+        output_identifier: S2_GEOTIFF
+  - identifier: HSM
+    sources:
+      step_outputs:
+      - step_identifier: habitat-suitability-model
+        output_identifier: HSM
+  - identifier: BATHY
+    sources:
+      step_outputs:
+      - step_identifier: bathymetry
+        output_identifier: BATHY
+  parameter_links:
+  - identifier: MASK_EXPRESSION
+    workflow_parameter: MASK_EXPRESSION
+  - identifier: UNSCALE
+    workflow_parameter: UNSCALE

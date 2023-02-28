@@ -1,0 +1,337 @@
+identifier: supervised-classification-model-generator
+version: 1.5.0
+title: "Supervised Classification Model Generator"
+abstract: |-
+  A workflow to train a supervised classification model on Sentinel-2 images
+  and ground truth data provided as a shapefile.
+
+  Sentinel-2 L1C is used as inputs and atmospherically corrected using Sen2Cor.
+
+  Input images are transformed to multi-band GeoTIFFs with the addition of
+  fmask and HSM bands for training to generate a model suitable for
+  implementation in other classification workflows.
+
+  The output products are:
+  - Supervised Classification Model (.txt)
+  - Confusion Matrix (.csv)
+  
+  **IMPORTANT**: At least one optional input is *required*. Provide data for
+  either "Sentinel-2 L1C Products" or the "Normalised \*" inputs (or a mix).
+
+keywords:
+- sentinel2
+- Supervised-Classification
+- ML
+
+inputs:
+- identifier: S2_L1C
+  title: Sentinel-2 L1C products
+  abstract: |-
+    Sentinel-2 level 1C scenes.
+
+    Not needed if "Normalised S-2 products", "Normalised S-2 product cloud
+    masks" and "Normalised S-2 product band statistics" are all provided.
+  min_occurs: 0
+
+- identifier: NORMALISED_GEOTIFFS
+  title: Normalised S-2 products
+  abstract: |-
+    Preprocessed Sentinel-2 products from the s2-seagrass-normalisation Step.
+  min_occurs: 0
+  format: GEOTIFF
+
+- identifier: NORMALISED_GEOTIFF_MASKS
+  title: Normalised S-2 product cloud masks
+  abstract: |-
+    Preprocessed cloud masks for normalised products
+  min_occurs: 0
+  format: GEOTIFF
+
+- identifier: NORMALISED_GEOTIFF_STATISTICS
+  title: Normalised S-2 product band statistics
+  min_occurs: 0
+  format: XML
+
+- identifier: GROUND_TRUTH_SHAPEFILE
+  title: Ground truth shapefile
+  abstract: |-
+    Shapefile classifying areas of the input images, to train recognition of
+    the classes' spectral signatures.
+  min_occurs: 1
+  max_occurs: 1
+  format: ZIP
+
+outputs:
+- identifier: MODEL
+  title: Supervised Classification Model
+  abstract: |-
+    Trained random forest model for use in OTB classification.
+  format: txt
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: supervised-classification-training, output_identifier: MODEL } ]
+
+- identifier: CONFUSION_MATRIX
+  title: Confusion Matrix
+  abstract: |-
+    Output file containing the confusion matrix or contingency table.
+  format: csv
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: supervised-classification-training, output_identifier: CONFUSION_MATRIX } ]
+
+- identifier: AUX_FILE
+  abstract: |-
+    An auxiliary file to track the inputs and parameters used in generation of
+    the model.
+  format: txt
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: supervised-classification-training, output_identifier: AUX_FILE } ]
+
+parameters:
+
+- identifier: TRAINING_SHAPEFILE_ATTR
+  title: Shapefile attribute containing training class identifier
+  abstract: |-
+    The attribute in the training data shapefile containing the classes to be
+    detected and matched in the `S2_L1C` images.
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "MC_ID" ]
+
+- identifier: BAND_NUMBERS
+  title: Features (bands) to be used in the training
+  abstract: |-
+    Space-separated list of band numbers (0-indexed) to be used when training 
+    the classifier. This set should reference some or all bands available in
+    the normalised S-2 images and must have the same number of elements as the
+    entries in the `NORMALISED_GEOTIFF_STATISTICS` XML files (if provided).
+    
+    Default: All bands of the s2-seagrass-normalisation:4.0.0 step.
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+  default_values: ["0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17"]
+
+- identifier: MASK_EXPRESSION
+  title: Cloud mask expression
+  abstract: |-
+    Custom bandmaths to be applied to the normalised products to generate a
+    mask product. This argument is provided to gdal_calc.py, and bands are
+    selected A..Z based on their index in the product.
+    
+    For example, to use the SCL band (`O`) to select only water pixels less
+    than 10 metres deep (bathymetry band `S`), where the CLD band (`N`) with a
+    threshold:
+    ```
+    (O==6) & (S<10) & (N<5)
+    ```
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "(O==6) & (S<10) & (N<5)" ]
+
+- identifier: RANDOM_SEED
+  title: Random seed
+  abstract: |-
+    A seed for random number generation. Used in the OTB applications
+    SampleSelection and TrainVectorClassifier. If set, the same seed is used in
+    both applications. If not set, each seed is chosen randomly.
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: UNSCALE_NORMALISED_PRODUCT
+  title: Unscale normalised product
+  abstract: |-
+    If true, the output GeoTIFF will be 'unscaled' - any configured data offset
+    or scale will be applied to the data values directly in the output.
+    Negative values will be clipped to 0.
+    
+    Default: true
+  data_type: Boolean
+  min_occurs: 0
+  max_occurs: 1
+  default_values: ["true"]
+
+- identifier: RF_MAX_DEPTH
+  title: (Random forest) Maximum depth of the tree
+  abstract: |-
+    The depth of the tree. A low value will likely underfit and conversely
+    a high value will likely overfit. The optimal value can be obtained
+    using cross validation or other suitable methods.
+    
+    Default: 5
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: RF_MIN_SAMPLES
+  title: (Random forest) Minimum number of samples in each node
+  abstract: |-
+    If the number of samples in a node is smaller than this parameter, then
+    the node will not be split. A reasonable value is a small percentage of
+    the total data e.g. 1 percent.
+    
+    Default: 10
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: RF_REGRESSION_ACCURACY
+  title: (Random forest) Termination criteria for regression tree
+  abstract: |-
+    If all absolute differences between an estimated value in a node and the
+    values of the train samples in this node are smaller than this regression
+    accuracy parameter, then the node will not be split.
+    
+    Default: 0
+  data_type: FLOAT
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: RF_CATEGORICAL_CLUSTERS
+  title: (Random forest) Categorical clusters
+  abstract: |-
+    Cluster possible values of a categorical variable into K <= cat clusters to
+    find a suboptimal split.
+    
+    Default: 10
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: RF_SUBSET_SIZE
+  title: (Random forest) Size of the randomly selected subset of features at each tree node
+  abstract: |-
+    The size of the subset of features, randomly selected at each tree node,
+    that are used to find the best split(s). If you set it to 0, then the
+    size will be set to the square root of the total number of features.
+    
+    Default: 0
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: RF_MAX_TREES
+  title: (Random forest) Maximum number of trees in the forest
+  abstract: |-
+    The maximum number of trees in the forest. Typically, the more trees you
+    have, the better the accuracy. However, the improvement in accuracy
+    generally diminishes and reaches an asymptote for a certain number of
+    trees. Also to keep in mind, increasing the number of trees increases
+    the prediction time linearly.
+    
+    Default: 100
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: RF_SUFFICIENT_ACCURACY
+  title: (Random forest) Sufficient accuracy (OOB error)
+  abstract: |-
+    Sufficient accuracy (OOB error).
+    
+    Default: 0.01
+  data_type: FLOAT
+  min_occurs: 0
+  max_occurs: 1
+
+step_configurations:
+
+- identifier: s2-seagrass-normalisation
+  nested_workflow:
+    identifier: s2-seagrass-normalisation
+    version: 2.0.5
+  input_links:
+  - identifier: S2_L1C
+    parallel: true
+    skip_step_if_empty: true
+    sources:
+      workflow_inputs: [ S2_L1C ]
+  parameter_links:
+  - identifier: MASK_EXPRESSION
+    workflow_parameter: MASK_EXPRESSION
+  - identifier: UNSCALE
+    workflow_parameter: UNSCALE_NORMALISED_PRODUCT
+
+- identifier: compute-images-statistics
+  step:
+    identifier: compute-images-statistics
+    version: 1.1.0
+  input_links:
+  - identifier: INPUT
+    parallel: true
+    sources:
+      step_outputs:
+      - step_identifier: s2-seagrass-normalisation
+        output_identifier: S2_GEOTIFF
+  parameter_links:
+  - identifier: BAND_NUMBERS
+    workflow_parameter: BAND_NUMBERS
+
+- identifier: merge-images-statistics
+  step:
+    identifier: merge-images-statistics
+    version: 1.0.0
+  input_links:
+  - identifier: INPUT
+    skip_step_if_empty: true
+    sources:
+      workflow_inputs: [ NORMALISED_GEOTIFF_STATISTICS ]
+      step_outputs:
+      - step_identifier: compute-images-statistics
+        output_identifier: IMAGES_STATISTICS
+
+- identifier: supervised-classification-training
+  step:
+    identifier: supervised-classification-training
+    version: 3.1.0
+  parameter_links:
+  - identifier: TRAINING_SHAPEFILE_ATTR
+    workflow_parameter: TRAINING_SHAPEFILE_ATTR
+  - identifier: TRAINING_FEATURES
+    workflow_parameter: BAND_NUMBERS
+  - identifier: RANDOM_SEED
+    workflow_parameter: RANDOM_SEED
+  - identifier: MAX_DEPTH
+    workflow_parameter: RF_MAX_DEPTH
+  - identifier: MIN_SAMPLES
+    workflow_parameter: RF_MIN_SAMPLES
+  - identifier: REGRESSION_ACCURACY
+    workflow_parameter: RF_REGRESSION_ACCURACY
+  - identifier: CATEGORICAL_CLUSTERS
+    workflow_parameter: RF_CATEGORICAL_CLUSTERS
+  - identifier: SUBSET_SIZE
+    workflow_parameter: RF_SUBSET_SIZE
+  - identifier: MAX_TREES
+    workflow_parameter: RF_MAX_TREES
+  - identifier: SUFFICIENT_ACCURACY
+    workflow_parameter: RF_SUFFICIENT_ACCURACY
+  input_links:
+  - identifier: INPUT
+    sources:
+      workflow_inputs: [ NORMALISED_GEOTIFFS ]
+      step_outputs:
+      - step_identifier: s2-seagrass-normalisation
+        output_identifier: S2_GEOTIFF
+  - identifier: MASK
+    sources:
+      workflow_inputs: [ NORMALISED_GEOTIFF_MASKS ]
+      step_outputs:
+      - step_identifier: s2-seagrass-normalisation
+        output_identifier: MASK
+  - identifier: STATISTICS
+    sources:
+      step_outputs:
+      - step_identifier: merge-images-statistics
+        output_identifier: IMAGES_STATISTICS
+  - identifier: GROUND_TRUTH_SHAPEFILE
+    sources:
+      workflow_inputs:
+      - GROUND_TRUTH_SHAPEFILE

@@ -1,0 +1,138 @@
+identifier: supervised-classification-prototyping
+version: 1.3.3
+title: "Supervised Classification Prototyping"
+abstract: |-
+  A workflow to produce a single band classified output using a pre-trained
+  supervised classification model. This workflow only implements a classification
+  step to prototype different models on pre-generated normalised datasets to be
+  used as inputs.
+
+  Input multi-band GeoTIFFs are classified into values corresponding to class
+  IDs of data used in the training of the input model.
+
+  The output products are:
+  - Classified GeoTIFF
+  - Classification Confidence GeoTIFF
+  - Classification with Confidence Masking GeoTIFF
+
+keywords:
+- sentinel2
+- classification
+- geotiff
+- ML
+
+inputs:
+- identifier: INPUT
+  title: INPUT
+  abstract: Multiband TIFF image to be classified
+  min_occurs: 1
+  max_occurs: 1
+  format: TIFF
+
+- identifier: MASK
+  title: MASK
+  abstract: Corresponding pixel mask for INPUT (e.g. cloud)
+  min_occurs: 0
+  format: TIFF
+
+- identifier: MODEL
+  title: MODEL
+  abstract: Pre-trained supervised classification model.
+  min_occurs: 1
+  max_occurs: 1
+  format: txt
+
+outputs:
+
+- identifier: CLASSIFIED
+  title: Classified TIFF
+  abstract: Single band TIFF classified into values corresponding to shapefile classes.
+  format: TIFF
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: supervised-classification, output_identifier: CLASSIFIED } ]
+
+- identifier: CONFIDENCE
+  title: Classification Confidence TIFF
+  abstract: Single band TIFF displaying classification confidence (proportion of votes for the majority class).
+  format: TIFF
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: supervised-classification, output_identifier: CONFIDENCE } ]
+
+- identifier: SINGLE_CLASS_CONFIDENCE
+  title: Single Class Confidence TIFF
+  abstract: |-
+    Single band TIFF displaying confidence of a single class defined by CLASS_ID. Low
+    classification confidence pixels filtered out, according to value of CONF_MASK_THRESHOLD.
+    ```
+  format: TIFF
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: confidence-masking, output_identifier: SINGLE_CLASS_CONFIDENCE } ]
+
+parameters:
+
+- identifier: CONF_MASK_THRESHOLD
+  title: Confidence Masking Threshold
+  abstract: |-
+    Value between 0 and 1 defining threshold classification confidence (proportion of votes for the majority class)
+    for a given pixel below which will be filtered out from the classification image. 
+    
+    Default: 0.1
+  data_type: Float
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ 0.1 ]
+
+- identifier: CLASS_ID
+  title: Class Identifier
+  abstract: |-
+    Integer value identifying the desired class to be displayed in the confidence map. Value should match one of those 
+    defined by the input model.
+    
+    Default: 1
+  data_type: Integer
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ 1 ]
+
+step_configurations:
+
+# Supervised Classification
+
+- identifier: supervised-classification
+  step:
+    identifier: supervised-classification
+    version: 1.2.3
+  input_links:
+  - identifier: INPUT
+    sources: { workflow_inputs: [ INPUT ] }
+  - identifier: MASK
+    sources: { workflow_inputs: [ MASK ] }
+  - identifier: MODEL
+    sources: { workflow_inputs: [ MODEL ] }
+
+- identifier: confidence-masking
+  step:
+    identifier: confidence-masking
+    version: 2.0.1
+  input_links:
+  - identifier: CLASSIFIED
+    sources:
+      step_outputs:
+      - step_identifier: supervised-classification
+        output_identifier: CLASSIFIED
+  - identifier: CONFIDENCE
+    sources:
+      step_outputs:
+      - step_identifier: supervised-classification
+        output_identifier: CONFIDENCE
+  parameter_links:
+  - identifier: CONF_MASK_THRESHOLD
+    workflow_parameter: CONF_MASK_THRESHOLD
+  - identifier: CLASS_ID
+    workflow_parameter: CLASS_ID

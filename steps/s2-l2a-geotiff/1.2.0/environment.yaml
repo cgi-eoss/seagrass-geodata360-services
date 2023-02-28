@@ -1,0 +1,15 @@
+# This file is *NOT* passed to the Docker build context.
+# The generated lock file is used to build the image.
+#
+# When changing this environment, update the lock file with:
+#   conda-lock --file ./environment.yaml
+
+channels:
+- conda-forge
+dependencies:
+- gdal=3.6.2
+- lxml=4.9.2
+- python=3.10.8
+- setuptools=66.1.1
+platforms:
+- linux-64

@@ -1,0 +1,49 @@
+identifier: supervised-classification
+title: Supervised Classification
+version: 1.2.3
+abstract: >-
+  Applies a pre-trained supervised classification model to a multi-band GeoTIFF
+  to produce a single band classified output.
+
+keywords:
+- sentinel-2
+- classification
+- geotiff
+- ML
+requests:
+  cpu: 4
+  memory: 5Gi
+
+inputs:
+- identifier: INPUT
+  title: INPUT
+  abstract: Multiband TIFF image to be classified
+  min_occurs: 1
+  max_occurs: 1
+  format: TIFF
+
+- identifier: MASK
+  title: MASK
+  abstract: Corresponding pixel mask for INPUT (e.g. cloud)
+  min_occurs: 0
+  format: TIFF
+
+- identifier: MODEL
+  title: MODEL
+  abstract: Pre-trained supervised classification model.
+  min_occurs: 1
+  max_occurs: 1
+  format: txt
+
+outputs:
+- identifier: CLASSIFIED
+  abstract: Single band TIFF classified into values corresponding to shapefile classes used in model training.
+  min_occurs: 1
+  max_occurs: 1
+  format: TIFF
+
+- identifier: CONFIDENCE
+  abstract: Single band TIFF displaying classification confidence (proportion of votes for the majority class).
+  min_occurs: 1
+  max_occurs: 1
+  format: TIFF

@@ -1,0 +1,155 @@
+FROM ubuntu:20.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    file \
+    unzip \
+    zip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Get multiple versions of sen2cor to process different product baselines
+RUN curl -sSLo /installer-2.11.00.run http://step.esa.int/thirdparties/sen2cor/2.11.0/Sen2Cor-02.11.00-Linux64.run \
+    && curl -sSLo /installer-2.5.5.run http://step.esa.int/thirdparties/sen2cor/2.5.5/Sen2Cor-02.05.05-Linux64.run
+
+# Normally you want to combine RUN commands to avoid committing files which are
+# later deleted and reduce overhead. In this case, the large CCI data files
+# are split up to avoid very fat layers (while sacrificing build time by
+# downloading the large archives multiple times).
+
+# ESACCI for sen2cor 2.11.00
+RUN mkdir -p /CCI-DATA-2.11.00  \
+    && curl -sSLo /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz https://earth.esa.int/eogateway/ftp/Sentinel-2/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz \
+    && tar xf /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz -C /CCI-DATA-2.11.00 --strip-components=1 \
+      ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif \
+      ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-WB-Map-150m-P13Y-2000-v4.0.tif \
+    && rm -f /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz
+RUN mkdir -p /CCI-DATA-2.11.00  \
+    && curl -sSLo /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz https://earth.esa.int/eogateway/ftp/Sentinel-2/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz \
+    && tar xf /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz -C /CCI-DATA-2.11.00 --strip-components=1 \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200001-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200002-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200003-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200004-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200005-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200006-2.4.tif \
+    && rm -f /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz
+RUN mkdir -p /CCI-DATA-2.11.00  \
+    && curl -sSLo /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz https://earth.esa.int/eogateway/ftp/Sentinel-2/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz \
+    && tar xf /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz -C /CCI-DATA-2.11.00 --strip-components=1 \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200007-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200008-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200009-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200010-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200011-2.4.tif \
+        ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10/ESACCI-LC-L4-Snow-Cond-500m-MONTHLY-2000-2012-v2.4/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-MONTHLY-2000-2012-200012-2.4.tif \
+    && rm -f /CCI-DATA-2.11.00/ESACCI-LC-L4-ALL-FOR-SEN2COR-2.10.tar.gz
+RUN ls -laR /CCI-DATA-2.11.00
+
+# ESACCI for older sen2cor
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-LCCS-WB-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-LCCS-Map-300m-P1Y-2015-v2.0.7.tif \
+        ESACCI-LC-L4-WB-Map-150m-P13Y-2000-v4.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000101-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000108-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000115-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000122-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000129-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000205-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000212-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000219-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000226-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000305-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000312-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000319-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000326-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000402-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000409-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000416-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000423-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000430-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000507-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000514-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000521-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000528-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000604-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000611-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000618-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000625-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000702-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000709-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000716-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000723-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000730-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000806-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000813-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000820-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000827-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000903-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000910-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000917-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20000924-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001001-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001008-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001015-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001022-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001029-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001105-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001112-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001119-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001126-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN mkdir -p /CCI-DATA-2.5.5  \
+    && curl -sSLo /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip ftp://anonymous:anonymous@geo10.elie.ucl.ac.be/CCI/LandCover/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip \
+    && unzip -p /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip CCI4SEN2COR/ESACCI-LC-L4-ALL-FOR-SEN2COR.tar | tar xf - -C /CCI-DATA-2.5.5 \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001203-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001210-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001217-v2.0.tif \
+        ESACCI-LC-L4-Snow-Cond-500m-P13Y7D-2000-2012-v2.0/ESACCI-LC-L4-Snow-Cond-AggOcc-500m-P13Y7D-2000-2012-20001224-v2.0.tif \
+    && rm -f /CCI-DATA-2.5.5/ESACCI-LC-L4-ALL-FOR-SEN2COR.zip
+RUN ls -laR /CCI-DATA-2.5.5
+
+RUN addgroup --system --gid 361 gaiascope \
+    && adduser --system --uid 361 --gid 361 gaiascope
+USER gaiascope
+WORKDIR /home/gaiascope
+
+COPY L2A_GIPP-2.11.00.xml L2A_GIPP-2.5.5.xml entrypoint.sh /
+ENTRYPOINT ["/bin/bash","/entrypoint.sh"]

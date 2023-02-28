@@ -1,0 +1,35 @@
+identifier: merge-images-statistics
+title: Merge previously-computed band statistics from a stack of images
+version: 1.0.0
+abstract: |-
+  Takes one or more outputs of the compute-images-statistics Step, and computes
+  the per-band mean, min, max, and standard deviation.
+  
+  Output is in XML format, equivalent to the OTB ComputeImageStatistics
+  application.
+keywords:
+  - cog
+requests:
+  cpu: 1
+  memory: 1Gi
+
+inputs:
+  - identifier: INPUT
+    title: Input statistics XML files
+    abstract: |-
+      One or more outputs from the compute-images-statistics Step, to be merged
+      to provide aggregate statistics for a large dataset.
+    min_occurs: 1
+    format: XML
+
+outputs:
+  - identifier: IMAGES_STATISTICS
+    title: Merged statistics from the input files
+    abstract: |-
+      XML file containing feature statistics for each band: mean, min,
+      max and standard deviation.
+    min_occurs: 1
+    max_occurs: 1
+    format: XML
+
+parameters: []

@@ -1,0 +1,103 @@
+identifier: s2-seagrass-normalisation
+title: Satellite data normalisation for seagrass processing
+version: 4.0.3
+abstract: |-
+  Merges the input data for seagrass processing in a predictable way, i.e. with
+  deterministic GeoTIFF band order.
+  
+  Inputs:
+  - Sentinel-2 L2A GeoTIFF
+  - Habitat Suitability Model GeoTIFF
+  
+  Output is in Cloud-Optimised GeoTIFF format at 10m resolution.
+keywords:
+- sentinel2
+- normalisation
+- cog
+requests:
+  cpu: 2
+  memory: 2Gi
+
+inputs:
+- identifier: S2_L2A
+  title: Full Sentinel-2 product in GeoTIFF format
+  abstract: |-
+    All bands of the input product, with 10m resolution, in Cloud-Optimised
+    GeoTIFF format.
+  min_occurs: 1
+  max_occurs: 1
+  format: GEOTIFF
+
+- identifier: HSM
+  title: Habitat Suitability Model
+  abstract: |-
+    Seagrass Habitat Suitability Model in Cloud-Optimised GeoTIFF format,
+    resampled and reprojected to input S2_L2A CRS.
+  min_occurs: 1
+  max_occurs: 1
+  format: GEOTIFF
+
+- identifier: BATHY
+  title: Bathymetry
+  abstract: |-
+    Bathymetry in Cloud-Optimised GeoTIFF format,
+    resampled and reprojected to input S2_L2A CRS.
+  min_occurs: 1
+  max_occurs: 1
+  format: GEOTIFF
+
+outputs:
+- identifier: S2_GEOTIFF
+  title: Normalised Sentinel-2 product in GeoTIFF format
+  abstract: Normalised Sentinel-2 product with additional seagrass-relevant bands
+  min_occurs: 1
+  max_occurs: 1
+  format: COG
+
+- identifier: MASK
+  title: Cloud mask for the product
+  abstract: Binary mask of the input product, to help deselect cloud, cloud shadow, and other unwanted pixels.
+  min_occurs: 1
+  max_occurs: 1
+  format: GEOTIFF
+
+parameters:
+
+- identifier: MASK_EXPRESSION
+  title: Masking bandmaths expression
+  abstract: |-
+    Custom bandmaths to be applied to the output product to generate a mask
+    product. This argument is provided to gdal_calc.py, and bands are selected
+    A..Z based on their index in the product.
+    
+    For example, to use the SCL band (`O`) to select only water pixels and the
+    CLD band (`N`) with a threshold:
+    ```
+    (O==6) & (N<5)
+    ```
+  min_occurs: 1
+  max_occurs: 1
+  data_type: String
+
+- identifier: COMPRESS
+  title: GeoTIFF compression
+  abstract: |-
+    The desired compression for the data in the GeoTIFF product. See
+    https://gdal.org/drivers/raster/cog.html for the available options.
+    
+    Default: DEFLATE
+  data_type: String
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: UNSCALE
+  title: Unscale output
+  abstract: |-
+    If true, the output GeoTIFF will be 'unscaled' - any configured data offset
+    or scale will be applied to the data values directly in the output.
+    Negative values will be clipped to 0.
+    
+    Default: true
+  data_type: Boolean
+  min_occurs: 0
+  max_occurs: 1

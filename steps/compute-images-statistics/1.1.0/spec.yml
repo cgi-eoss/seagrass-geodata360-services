@@ -1,0 +1,62 @@
+identifier: compute-images-statistics
+title: Compute band statistics across a stack of images
+version: 1.1.0
+abstract: |-
+  Takes one or more GeoTIFF images, and computes the per-band mean, min, max,
+  and standard deviation.
+  
+  Output is in XML format, equivalent to the OTB ComputeImageStatistics
+  application.
+  
+  This implementation deals better with larger stacks, but also allows
+  horizontal scalability by emitting an additional "samples" attribute when
+  given a single input file, allowing the merge-images-statistics Step to merge
+  the outputs of multiple instances of this Step.
+keywords:
+  - cog
+requests:
+  cpu: 4
+  memory: 24Gi
+
+inputs:
+  - identifier: INPUT
+    title: Input GeoTIFFs
+    abstract: |-
+      Multiband images across which statistics should be calculated.
+    min_occurs: 1
+    format: TIFF
+
+outputs:
+  - identifier: IMAGES_STATISTICS
+    title: Per-band statistics of the input images
+    abstract: |-
+      XML file containing feature statistics for each band: mean, min,
+      max and standard deviation.
+    min_occurs: 1
+    max_occurs: 1
+    format: XML
+
+parameters:
+
+  - identifier: MASK_BAND
+    title: Image bandname containing 0 values to indicate nodata
+    abstract: |-
+      A band name from the INPUT images in which 0 values indicate nodata for
+      all bands in the image, i.e. a mask.
+      
+      Default: SCL
+    data_type: String
+    min_occurs: 0
+    max_occurs: 1
+
+  - identifier: BAND_NUMBERS
+    title: Bands for which to emit statistics
+    abstract: |-
+      Space-separated list of band numbers (0-indexed) for which statistics
+      should be computed. This set should reference some or all bands available
+      in the `INPUT` images.
+        
+      Default: All bands of the s2-seagrass-normalisation:3.0.0 step.
+    data_type: String
+    min_occurs: 0
+    max_occurs: 1
