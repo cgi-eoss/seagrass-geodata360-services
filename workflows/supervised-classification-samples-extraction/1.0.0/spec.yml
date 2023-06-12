@@ -1,0 +1,234 @@
+identifier:
+  identifier: supervised-classification-samples-extraction
+  version: 1.0.0
+title: Supervised classification samples extraction
+abstract: |-
+  **IMPORTANT**: At least one optional input is *required*. Provide data for
+  either "Sentinel-2 Product" or the "Normalised \*" inputs (or a mix).
+
+keywords:
+- sentinel2
+- classification
+- geotiff
+- ML
+
+inputs:
+
+- identifier: S2_PRODUCT
+  title: Sentinel-2 product
+  abstract: Sentinel-2 Level 1C or 2A product directory or zip archive
+  min_occurs: 0
+  format: SAFE
+
+- identifier: NORMALISED_GEOTIFF
+  title: Normalised S-2 products
+  abstract: |-
+    Preprocessed Sentinel-2 products from the s2-seagrass-normalisation Step.
+  min_occurs: 0
+  format: GEOTIFF
+
+- identifier: NORMALISED_GEOTIFF_MASK
+  title: Normalised S-2 product cloud masks
+  abstract: |-
+    Preprocessed cloud masks for normalised products
+  min_occurs: 0
+  format: GEOTIFF
+
+- identifier: GROUND_TRUTH
+  title: Ground truth data
+  abstract: |-
+    Vector data containing scene classification geometries.
+  min_occurs: 1
+  max_occurs: 1
+  format: VECTOR
+
+outputs:
+
+- identifier: SAMPLES
+  title: Extracted product samples with correlated ground truth points
+  abstract: |-
+    A numpy compressed .npz file containing two arrays: `samples` with shape
+    (N, M) (where M is the number of features/bands in the source product) and
+    correlated `ground_truth` with shape (N,).
+  min_occurs: 1
+  max_occurs: 1
+  format: NPZ
+  sources:
+    step_outputs: [ { step_identifier: sklearn-extract-training-samples, output_identifier: SAMPLES } ]
+
+- identifier: NORMALISED_GEOTIFF
+  title: Normalised Sentinel-2 products in GeoTIFF format
+  abstract: |-
+    All bands of the input product, plus additional seagrass-relevant bands, 
+    with 10m resolution, in Cloud-Optimised GeoTIFF format.
+  format: COG
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    workflow_inputs: [ NORMALISED_GEOTIFF ]
+    step_outputs: [ { step_identifier: s2-seagrass-normalisation, output_identifier: S2_GEOTIFF } ]
+
+- identifier: NORMALISED_GEOTIFF_MASK
+  title: Cloud mask for the product
+  abstract: |-
+    Binary mask of the normalised input product, to help deselect cloud,
+    cloud shadow, and other unwanted pixels.
+  format: GEOTIFF
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    workflow_inputs: [ NORMALISED_GEOTIFF_MASK ]
+    step_outputs: [ { step_identifier: s2-seagrass-normalisation, output_identifier: MASK } ]
+
+parameters:
+
+- identifier: NORMALISATION_MASK_EXPRESSION
+  title: Cloud mask expression
+  abstract: |-
+    Custom bandmaths to be applied to the output product to generate a mask
+    product. This argument is provided to gdal_calc.py, and bands are selected
+    A..Z based on their index in the product.
+    
+    For example, to use the SCL band (`O`) to select only water pixels less
+    than 10 metres deep (bathymetry band `S`), where the CLD band (`N`) with a
+    threshold:
+    ```
+    (O==6) & (S<10) & (N<5)
+    ```
+  data_type: String
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "(O==6) & (S<10) & (N<5)" ]
+
+- identifier: NORMALISATION_UNSCALE
+  title: Unscale output
+  abstract: |-
+    If true, the output GeoTIFF will be 'unscaled' - any configured data offset
+    or scale will be applied to the data values directly in the output.
+    Negative values will be clipped to 0.
+    
+    Default: true
+  data_type: Boolean
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "true" ]
+
+- identifier: TRAINING_ATTR
+  title: Ground truth vector file attribute containing training class identifier
+  abstract: |-
+    The attribute in the training data (e.g. shapefile attribute) containing
+    the classes to be detected and matched in the `INPUT` images.
+    
+    Default: "MC_ID"
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+
+step_configurations:
+
+#########################################
+# START s2-seagrass-normalisation:2.0.5 #
+#########################################
+
+# Atmospheric correction to L2A
+- identifier: sen2cor
+  step:
+    identifier: sen2cor
+    version: 2.0.2
+  input_links:
+  - identifier: S2_PRODUCT
+    skip_step_if_empty: true
+    sources:
+      workflow_inputs: [ S2_PRODUCT ]
+  parameter_links:
+  - identifier: ENABLE_QI_DATA_FALLBACK
+    hardcoded_value: [ "true" ]
+  - identifier: ENABLE_ZIP_OUTPUT
+    hardcoded_value: [ "true" ]
+
+# Seagrass habitat suitability index, normalised to product geometry
+- identifier: habitat-suitability-model
+  step:
+    identifier: habitat-suitability-model
+    version: 1.1.0
+  input_links:
+  - identifier: S2_PRODUCT
+    skip_step_if_empty: true
+    sources:
+      workflow_inputs: [ S2_PRODUCT ]
+
+# Bathymetry, normalised to product geometry
+- identifier: bathymetry
+  step:
+    identifier: bathymetry
+    version: 1.1.0
+  input_links:
+  - identifier: S2_PRODUCT
+    skip_step_if_empty: true
+    sources:
+      workflow_inputs: [ S2_PRODUCT ]
+
+# S-2 L2A product converted to GeoTIFF
+- identifier: s2-l2a-geotiff
+  step:
+    identifier: s2-l2a-geotiff
+    version: 1.2.0
+  input_links:
+  - identifier: INPUT
+    skip_step_if_empty: true
+    sources:
+      step_outputs:
+      - step_identifier: sen2cor
+        output_identifier: S2_L2A
+
+# All layers merged to a single multi-band GeoTIFF
+- identifier: s2-seagrass-normalisation
+  step:
+    identifier: s2-seagrass-normalisation
+    version: 4.0.3
+  input_links:
+  - identifier: S2_L2A
+    skip_step_if_empty: true
+    sources:
+      step_outputs:
+      - step_identifier: s2-l2a-geotiff
+        output_identifier: S2_GEOTIFF
+  - identifier: HSM
+    sources:
+      step_outputs:
+      - step_identifier: habitat-suitability-model
+        output_identifier: HSM
+  - identifier: BATHY
+    sources:
+      step_outputs:
+      - step_identifier: bathymetry
+        output_identifier: BATHY
+  parameter_links:
+  - identifier: MASK_EXPRESSION
+    workflow_parameter: NORMALISATION_MASK_EXPRESSION
+  - identifier: UNSCALE
+    workflow_parameter: NORMALISATION_UNSCALE
+
+#######################################
+# END s2-seagrass-normalisation:2.0.5 #
+#######################################
+
+- identifier: sklearn-extract-training-samples
+  step:
+    identifier: sklearn-extract-training-samples
+    version: 1.0.0
+  input_links:
+  - identifier: PRODUCT
+    sources:
+      workflow_inputs: [ NORMALISED_GEOTIFF ]
+      step_outputs: [ { step_identifier: s2-seagrass-normalisation, output_identifier: S2_GEOTIFF } ]
+  - identifier: MASK
+    sources:
+      workflow_inputs: [ NORMALISED_GEOTIFF_MASK ]
+      step_outputs: [ { step_identifier: s2-seagrass-normalisation, output_identifier: MASK } ]
+  - identifier: GROUND_TRUTH
+    sources:
+      workflow_inputs: [ GROUND_TRUTH ]
+  parameter_links:
+  - identifier: TRAINING_ATTR
+    workflow_parameter: TRAINING_ATTR

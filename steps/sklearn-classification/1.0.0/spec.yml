@@ -1,0 +1,99 @@
+title: scikit-learn classification
+identifier:
+  identifier: sklearn-classification
+  version: 1.0.0
+abstract: |-
+  Given a trained scikit-learn classifier, process a source product to create
+  a classification map.
+  
+  An optional secondary output is a corresponding class probability map
+  containing the classifier's probability estimates for each pixel.
+keywords:
+- sklearn
+- scikit-learn
+- machine-learning
+- classification
+requests:
+  cpu: 4
+  memory: 20Gi
+
+inputs:
+- identifier: CLASSIFIER
+  title: Serialised sklearn classifier
+  abstract: |-
+    A `joblib.dump`-serialised classifier object, trained on something relevant
+    for PRODUCT.
+  min_occurs: 1
+  max_occurs: 1
+  format: BINARY
+
+- identifier: PRODUCT
+  title: Source raster product
+  abstract: |-
+    Input product from which training samples should be extracted.
+  min_occurs: 1
+  max_occurs: 1
+  format: RASTER
+
+- identifier: MASK
+  title: Source product mask
+  abstract: |-
+    Mask for the input product, describing which pixels should be considered
+    valid (value `1`) or invalid (value `0`).
+  min_occurs: 0
+  max_occurs: 1
+  format: RASTER
+
+outputs:
+
+- identifier: CLASSIFIED
+  title: Classification map
+  abstract: |-
+    Single band TIFF classified into values corresponding to classes used in
+    model training.
+  min_occurs: 1
+  max_occurs: 1
+  format: GEOTIFF
+
+- identifier: CLASS_PROBABILITY
+  title: Classification probability map
+  abstract: |-
+    Multi-band TIFF where bands correspond to the classes in the original
+    vector training data, with values set to the classifier probability.
+  min_occurs: 0
+  max_occurs: 1
+  format: GEOTIFF
+
+parameters:
+
+- identifier: TRAINING_FEATURES
+  title: Features (bands) to be used in the training
+  abstract: |-
+    Space-separated list of band numbers (0-indexed) used in training the
+    classifier. This set should reference some or all bands available in
+    the PRODUCT, and correspond with the value used in the sklearn-train-classifier step
+    
+    Default: Sentinel-2 sensing bands, plus seagrass habitat suitability model
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: USE_MASK
+  title: Toggle product mask in output
+  abstract: |-
+    If true, limit classification to the pixels specified in the MASK input. 
+    
+    Default: true
+  data_type: BOOLEAN
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: OUTPUT_PROBA
+  title: Create class probability product
+  abstract: |-
+    If true, additionally calculate and emit a class probability product.
+    
+    Default: true
+  data_type: BOOLEAN
+  min_occurs: 0
+  max_occurs: 1

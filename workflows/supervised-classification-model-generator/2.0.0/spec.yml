@@ -1,0 +1,248 @@
+identifier:
+  identifier: supervised-classification-model-generator
+  version: 2.0.0
+title: "Supervised Classification Model Generator"
+abstract: |-
+  A workflow to train a supervised classification model on Sentinel-2 images
+  and ground truth data provided as a shapefile.
+  
+  Sentinel-2 L1C is used as inputs and atmospherically corrected using Sen2Cor.
+  
+  Input images are normalised to multi-band GeoTIFFs with the addition of
+  seagrass-relevant bands.
+  
+  The output products are:
+  
+  - trained scikit-learn classifier (joblib serialised object)
+  - auxiliary file containing classifier metrics and input parameters
+  
+  **IMPORTANT**: At least one optional input is *required*. Provide data for
+  either "Sentinel-2 L1C Products" or the "Normalised \*" inputs (or a mix).
+
+keywords:
+- sentinel2
+- supervised-classification
+- ml
+- sklearn
+- scikit-learn
+- machine-learning
+- training
+
+inputs:
+- identifier: S2_PRODUCTS
+  title: Sentinel-2 L1C or L2A products
+  abstract: |-
+    Sentinel-2 level 1C or 2A scenes.
+
+    Not needed if "Normalised S-2 products", "Normalised S-2 product cloud
+    masks" and "Normalised S-2 product band statistics" are all provided.
+  min_occurs: 0
+
+- identifier: NORMALISED_GEOTIFFS
+  title: Normalised S-2 products
+  abstract: |-
+    Preprocessed Sentinel-2 products from the s2-seagrass-normalisation Step.
+  min_occurs: 0
+  format: GEOTIFF
+
+- identifier: NORMALISED_GEOTIFF_MASKS
+  title: Normalised S-2 product cloud masks
+  abstract: |-
+    Preprocessed cloud masks for normalised products
+  min_occurs: 0
+  format: GEOTIFF
+
+- identifier: GROUND_TRUTH
+  title: Ground truth data
+  abstract: |-
+    Vector data containing scene classification geometries.
+  min_occurs: 1
+  max_occurs: 1
+  format: VECTOR
+
+outputs:
+- identifier: MODEL
+  title: Serialised sklearn classifier
+  abstract: |-
+    A `joblib.dump`-serialised classifier object, fit to the input SAMPLES.
+  min_occurs: 1
+  max_occurs: 1
+  format: BINARY
+  sources:
+    step_outputs: [ { step_identifier: train-classifier, output_identifier: MODEL } ]
+
+- identifier: AUX_FILE
+  title: Model description auxiliary file
+  abstract: |-
+    An auxiliary file to track the inputs and parameters used in generation of 
+    the model, along with classifier characteristics.
+  min_occurs: 1
+  max_occurs: 1
+  format: JSON
+  sources:
+    step_outputs: [ { step_identifier: train-classifier, output_identifier: AUX_FILE } ]
+
+- identifier: SAMPLES
+  title: Extracted product samples with correlated ground truth points
+  abstract: |-
+    A numpy compressed .npz file containing two arrays: `samples` with shape
+    (N, M) (where M is the number of features/bands in the source product) and
+    correlated `ground_truth` with shape (N,).
+  min_occurs: 1
+  format: NPZ
+  sources:
+    step_outputs: [ { step_identifier: samples-extraction, output_identifier: SAMPLES } ]
+
+- identifier: NORMALISED_GEOTIFFS
+  title: Normalised Sentinel-2 products in GeoTIFF format
+  abstract: |-
+    Input Sentinel-2 products normalised: all bands of the input product, plus
+    additional seagrass-relevant bands, with 10m resolution, in Cloud-Optimised
+    GeoTIFF format.
+  format: COG
+  min_occurs: 1
+  sources:
+    workflow_inputs: [ NORMALISED_GEOTIFFS ]
+    step_outputs: [ { step_identifier: samples-extraction, output_identifier: NORMALISED_GEOTIFF } ]
+
+- identifier: NORMALISED_GEOTIFF_MASKS
+  title: Cloud mask for the product
+  abstract: |-
+    Binary masks of each normalised input product, to help deselect cloud,
+    cloud shadow, and other unwanted pixels.
+  format: GEOTIFF
+  min_occurs: 1
+  sources:
+    workflow_inputs: [ NORMALISED_GEOTIFF_MASKS ]
+    step_outputs: [ { step_identifier: samples-extraction, output_identifier: NORMALISED_GEOTIFF_MASK } ]
+
+parameters:
+
+- identifier: NORMALISATION_MASK_EXPRESSION
+  title: Cloud mask expression
+  abstract: |-
+    Custom bandmaths to be applied to the output product to generate a mask
+    product. This argument is provided to gdal_calc.py, and bands are selected
+    A..Z based on their index in the product.
+
+    For example, to use the SCL band (`O`) to select only water pixels less
+    than 10 metres deep (bathymetry band `S`), where the CLD band (`N`) with a
+    threshold:
+    ```
+    (O==6) & (S<10) & (N<5)
+    ```
+  data_type: String
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "(O==6) & (S<10) & (N<5)" ]
+
+- identifier: NORMALISATION_UNSCALE
+  title: Unscale output
+  abstract: |-
+    If true, the output GeoTIFF will be 'unscaled' - any configured data offset
+    or scale will be applied to the data values directly in the output.
+    Negative values will be clipped to 0.
+
+    Default: true
+  data_type: Boolean
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "true" ]
+
+- identifier: TRAINING_ATTR
+  title: Ground truth vector file attribute containing training class identifier
+  abstract: |-
+    The attribute in the training data (e.g. shapefile attribute) containing
+    the classes to be detected and matched in the `INPUT` images.
+    
+    Default: "MC_ID"
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: GRID_SEARCH_CROSS_VALIDATION
+  title: Toggle dynamic parameter evaluation for training
+  abstract: |-
+    If true, perform a grid-search cross-validation with a (hardcoded) set of
+    preselected default parameters for the classifier. The best estimator will
+    be used as the output MODEL.
+
+    Default: true
+  data_type: BOOLEAN
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "true" ]
+
+- identifier: TRAINING_FEATURES
+  title: Features (bands) to be used in the training
+  abstract: |-
+    Space-separated list of band numbers (0-indexed) to be used when training
+    the classifier. This set should reference some or all bands available in
+    the `samples` arrays.
+
+    Default: Sentinel-2 sensing bands, plus seagrass habitat suitability model
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+
+# TODO Allow configuring when a) we support more classifiers and b) the UI properly supports allowed_values
+#- identifier: SKLEARN_CLASSIFIER
+#  title: scikit-learn classifier name
+#  abstract: |-
+#    Classifier class from scikit-learn to be trained on the input data.
+#    Specific parameter mapping is required, so a limited selection is allowed.
+#
+#    Default: RandomForestClassifier
+#  data_type: STRING
+#  min_occurs: 0
+#  max_occurs: 1
+#  allowed_values:
+#  - { type: VALUE, value: '' }
+#  - { type: VALUE, value: 'RandomForestClassifier' }
+
+step_configurations:
+
+- identifier: samples-extraction
+  nested_workflow:
+    identifier: supervised-classification-samples-extraction
+    version: 1.0.0
+  input_links:
+  - identifier: S2_PRODUCT
+    parallel: true
+    sources:
+      workflow_inputs: [ S2_PRODUCTS ]
+  - identifier: GROUND_TRUTH
+    sources:
+      workflow_inputs: [ GROUND_TRUTH ]
+  # TODO Allow these inputs when the workflow language supports pairing them up
+  #  - identifier: NORMALISED_GEOTIFF
+  #    sources:
+  #      workflow_inputs: [ NORMALISED_GEOTIFFS ]
+  #      step_outputs: [ { step_identifier: s2-seagrass-normalisation, output_identifier: S2_GEOTIFF } ]
+  #  - identifier: MASK
+  #    sources:
+  #      workflow_inputs: [ NORMALISED_GEOTIFF_MASKS ]
+  #      step_outputs: [ { step_identifier: s2-seagrass-normalisation, output_identifier: MASK } ]
+  parameter_links:
+  - identifier: NORMALISATION_MASK_EXPRESSION
+    workflow_parameter: NORMALISATION_MASK_EXPRESSION
+  - identifier: NORMALISATION_UNSCALE
+    workflow_parameter: NORMALISATION_UNSCALE
+  - identifier: TRAINING_ATTR
+    workflow_parameter: TRAINING_ATTR
+
+- identifier: train-classifier
+  step:
+    identifier: sklearn-train-classifier
+    version: 1.0.0
+  parameter_links:
+  - identifier: GRID_SEARCH_CROSS_VALIDATION
+    workflow_parameter: GRID_SEARCH_CROSS_VALIDATION
+  - identifier: TRAINING_FEATURES
+    workflow_parameter: TRAINING_FEATURES
+  - identifier: SKLEARN_CLASSIFIER
+    hardcoded_value: [ "RandomForestClassifier" ]
+  input_links:
+  - identifier: SAMPLES
+    sources:
+      step_outputs: [ { step_identifier: samples-extraction, output_identifier: SAMPLES } ]

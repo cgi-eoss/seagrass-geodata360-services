@@ -1,0 +1,73 @@
+title: scikit-learn training sample extraction
+identifier:
+  identifier: sklearn-extract-training-samples
+  version: 1.0.0
+abstract: |-
+  Given a raster product and corresponding pixel mask, plus ground truth
+  vector data, extract to a 1D array the valid samples, i.e. those pixels from
+  the product which are not masked and intersect with the ground truth data.
+
+  The output consists of two arrays in a single numpy compressed .npz file:
+  `samples` with shape (N, M) (where M is the number of features/bands in the
+  source product) and correlated `ground_truth` with shape (N,).
+  
+  The output arrays are suitable for use in scikit-learn `.fit()` methods as
+  the `X` and `y` parameters respectively.
+keywords:
+- sklearn
+- scikit-learn
+- machine-learning
+- training
+requests:
+  cpu: 2
+  memory: 12Gi
+
+inputs:
+- identifier: PRODUCT
+  title: Source raster product
+  abstract: |-
+    Input product from which training samples should be extracted.
+  min_occurs: 1
+  max_occurs: 1
+  format: RASTER
+
+- identifier: MASK
+  title: Source product mask
+  abstract: |-
+    Mask for the input product, describing which pixels should be considered
+    valid (value `1`) or invalid (value `0`).
+  min_occurs: 1
+  max_occurs: 1
+  format: RASTER
+
+- identifier: GROUND_TRUTH
+  title: Ground truth data
+  abstract: |-
+    Vector data containing scene classification geometries.
+  min_occurs: 1
+  max_occurs: 1
+  format: VECTOR
+
+outputs:
+- identifier: SAMPLES
+  title: Extract samples and correlated ground truth points
+  abstract: |-
+    A numpy compressed .npz file containing two arrays: `samples` with shape
+    (N, M) (where M is the number of features/bands in the source product) and
+    correlated `ground_truth` with shape (N,).
+  min_occurs: 1
+  max_occurs: 1
+  format: NPZ
+
+parameters:
+
+- identifier: TRAINING_ATTR
+  title: Ground truth vector file attribute containing training class identifier
+  abstract: |-
+    The attribute in the training data (e.g. shapefile attribute) containing
+    the classes to be detected and matched in the `INPUT` images.
+    
+    Default: "MC_ID"
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1

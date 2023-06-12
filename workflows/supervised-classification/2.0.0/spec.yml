@@ -1,0 +1,233 @@
+identifier:
+  identifier: supervised-classification
+  version: 2.0.0
+title: "Supervised Classification"
+abstract: |-
+  A workflow to produce a single band classified output using a pre-trained
+  supervised classification model.
+
+  Sentinel-2 L1C or L2A are used as inputs and atmospherically corrected using
+  Sen2Cor if required.
+
+  Input images are transformed to multi-band GeoTIFFs and classified into values
+  corresponding to class IDs of data used in the training of the input model.
+
+  The output products are:
+  - Classified GeoTIFF
+  - Classification Confidence GeoTIFF
+  - Classification with Confidence Masking GeoTIFF
+  
+  **IMPORTANT**: At least one optional input is *required*. Provide data for
+  either "Sentinel-2 L1C Product" or the "Normalised \*" inputs.
+
+keywords:
+- sentinel2
+- classification
+- geotiff
+- ML
+
+inputs:
+- identifier: S2_PRODUCT
+  title: Sentinel-2 L1C or L2A product
+  abstract: |-
+    Sentinel-2 level 1C or 2A scene.
+
+    Not needed if "Normalised S-2 product" and "Normalised S-2 product mask"
+    are provided.
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: NORMALISED_GEOTIFF
+  title: Normalised S-2 product
+  abstract: |-
+    Preprocessed Sentinel-2 product from the s2-seagrass-normalisation Step.
+  min_occurs: 0
+  max_occurs: 1
+  format: GEOTIFF
+
+- identifier: NORMALISED_GEOTIFF_MASK
+  title: Normalised S-2 product mask
+  abstract: |-
+    Preprocessed cloud mask for normalised product
+  min_occurs: 0
+  max_occurs: 1
+  format: GEOTIFF
+
+- identifier: CLASSIFIER
+  title: Serialised sklearn classifier
+  abstract: |-
+    A `joblib.dump`-serialised classifier object, trained on something relevant
+    for S2_PRODUCT.
+  min_occurs: 1
+  max_occurs: 1
+  format: BINARY
+
+outputs:
+
+- identifier: CLASSIFIED
+  title: Classification map
+  abstract: |-
+    Single band TIFF classified into values corresponding to classes used in
+    model training.
+  min_occurs: 1
+  max_occurs: 1
+  format: GEOTIFF
+  sources:
+    step_outputs: [ { step_identifier: supervised-classification, output_identifier: CLASSIFIED } ]
+
+- identifier: CLASS_PROBABILITY
+  title: Classification probability map
+  abstract: |-
+    Multi-band TIFF where bands correspond to the classes in the original
+    vector training data, with values set to the classifier probability.
+  min_occurs: 0
+  max_occurs: 1
+  format: GEOTIFF
+  sources:
+    step_outputs: [ { step_identifier: supervised-classification, output_identifier: CLASS_PROBABILITY } ]
+
+- identifier: SINGLE_CLASS_CONFIDENCE
+  title: Single Class Confidence TIFF
+  abstract: |-
+    Single band TIFF displaying confidence of a single class defined by CLASS_ID. Low
+    classification confidence pixels filtered out, according to value of CONF_MASK_THRESHOLD.
+    ```
+  format: TIFF
+  min_occurs: 1
+  max_occurs: 1
+  sources:
+    step_outputs: [ { step_identifier: confidence-masking, output_identifier: SINGLE_CLASS_CONFIDENCE } ]
+
+parameters:
+
+- identifier: MASK_EXPRESSION
+  title: Cloud mask expression
+  abstract: |-
+    Custom bandmaths to be applied to the normalised products to generate a
+    mask product. This argument is provided to gdal_calc.py, and bands are
+    selected A..Z based on their index in the product.
+    
+    For example, to use the SCL band (`O`) to select only water pixels less
+    than 10 metres deep (bathymetry band `S`), where the CLD band (`N`) with a
+    threshold:
+    ```
+    (O==6) & (S<10) & (N<5)
+    ```
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "(O==6) & (S<10) & (N<5)" ]
+
+- identifier: UNSCALE_NORMALISED_PRODUCT
+  title: Unscale normalised product
+  abstract: |-
+    If true, the output GeoTIFF will be 'unscaled' - any configured data offset
+    or scale will be applied to the data values directly in the output.
+    Negative values will be clipped to 0.
+    
+    Default: true
+  data_type: BOOLEAN
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "true" ]
+
+- identifier: USE_MASK
+  title: Toggle product mask in output
+  abstract: |-
+    If true, limit classification to the pixels specified in the masked input. 
+    
+    Default: true
+  data_type: BOOLEAN
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ "true" ]
+
+- identifier: CONF_MASK_THRESHOLD
+  title: Confidence Masking Threshold
+  abstract: |-
+    Value between 0 and 1 defining threshold classification probability for a
+    given pixel below which will be filtered out from the classification image. 
+    
+    Default: 0.5
+  data_type: FLOAT
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ 0.5 ]
+
+- identifier: CLASS_ID
+  title: Class Identifier
+  abstract: |-
+    Integer value identifying the desired class to be displayed in the confidence map. Value should match one of those 
+    defined by the input model.
+    
+    Default: 1
+  data_type: INTEGER
+  min_occurs: 0
+  max_occurs: 1
+  default_values: [ 1 ]
+
+step_configurations:
+
+- identifier: s2-seagrass-normalisation
+  nested_workflow:
+    identifier: s2-seagrass-normalisation
+    version: 2.0.5
+  input_links:
+  - identifier: S2_L1C
+    skip_step_if_empty: true
+    sources:
+      workflow_inputs: [ S2_PRODUCT ]
+  parameter_links:
+  - identifier: MASK_EXPRESSION
+    workflow_parameter: MASK_EXPRESSION
+  - identifier: UNSCALE
+    workflow_parameter: UNSCALE_NORMALISED_PRODUCT
+
+  # Supervised Classification
+
+- identifier: supervised-classification
+  step:
+    identifier: sklearn-classification
+    version: 1.0.0
+  input_links:
+  - identifier: PRODUCT
+    sources:
+      step_outputs:
+      - step_identifier: s2-seagrass-normalisation
+        output_identifier: S2_GEOTIFF
+      workflow_inputs: [ NORMALISED_GEOTIFF ]
+  - identifier: MASK
+    sources:
+      step_outputs:
+      - step_identifier: s2-seagrass-normalisation
+        output_identifier: MASK
+      workflow_inputs: [ NORMALISED_GEOTIFF_MASK ]
+  - identifier: CLASSIFIER
+    sources:
+      workflow_inputs: [ CLASSIFIER ]
+  parameter_links:
+  - identifier: USE_MASK
+    workflow_parameter: USE_MASK
+  - identifier: OUTPUT_PROBA
+    hardcoded_value: [ "true" ]
+
+- identifier: confidence-masking
+  step:
+    identifier: confidence-masking
+    version: 2.0.1
+  input_links:
+  - identifier: CLASSIFIED
+    sources:
+      step_outputs:
+      - step_identifier: supervised-classification
+        output_identifier: CLASSIFIED
+  - identifier: CONFIDENCE
+    sources:
+      step_outputs:
+      - step_identifier: supervised-classification
+        output_identifier: CLASS_PROBABILITY
+  parameter_links:
+  - identifier: CONF_MASK_THRESHOLD
+    workflow_parameter: CONF_MASK_THRESHOLD
+  - identifier: CLASS_ID
+    workflow_parameter: CLASS_ID

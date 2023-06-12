@@ -1,0 +1,91 @@
+title: scikit-learn classifier training
+identifier:
+  identifier: sklearn-train-classifier
+  version: 1.0.0
+abstract: |-
+  Given preselected and reshaped training data samples, fit a classifier model
+  and serialise it for later use.
+  
+  The input format is expected to be one or more numpy compressed .npz files,
+  each containing aligned `samples` and `ground_truth`. These are loaded and
+  concatenated before being used to train a classifier with the `fit` method.
+  
+  The output is the trained classifier, serialised by `joblib.dump`, for later
+  loading by `joblib.load`, which can subsequently be used to generate
+  predictions on new input data. An auxiliary file contains the parameters used
+  to generate the model.
+keywords:
+- sklearn
+- scikit-learn
+- machine-learning
+- training
+requests:
+  cpu: 8
+  memory: 2Gi
+
+inputs:
+- identifier: SAMPLES
+  title: Training samples
+  abstract: |-
+    Numpy compressed .npz files containing `samples` and `ground_truth` arrays
+    for training a model.
+  min_occurs: 1
+  format: NPZ
+
+outputs:
+- identifier: MODEL
+  title: Serialised sklearn classifier
+  abstract: |-
+    A `joblib.dump`-serialised classifier object, fit to the input SAMPLES.
+  min_occurs: 1
+  max_occurs: 1
+  format: BINARY
+
+- identifier: AUX_FILE
+  title: Model description auxiliary file
+  abstract: |-
+    An auxiliary file to track the inputs and parameters used in generation of 
+    the model.
+  min_occurs: 1
+  max_occurs: 1
+  format: JSON
+
+parameters:
+
+- identifier: GRID_SEARCH_CROSS_VALIDATION
+  title: Toggle dynamic parameter evaluation for training
+  abstract: |-
+    If true, perform a grid-search cross-validation with a (hardcoded) set of
+    preselected default parameters for the classifier. The best estimator will
+    be used as the output MODEL.
+    
+    Default: true
+  data_type: BOOLEAN
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: TRAINING_FEATURES
+  title: Features (bands) to be used in the training
+  abstract: |-
+    Space-separated list of band numbers (0-indexed) to be used when training 
+    the classifier. This set should reference some or all bands available in
+    the `samples` arrays.
+    
+    Default: Sentinel-2 sensing bands, plus seagrass habitat suitability model
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+
+- identifier: SKLEARN_CLASSIFIER
+  title: scikit-learn classifier name
+  abstract: |-
+    Classifier class from scikit-learn to be trained on the input data.
+    Specific parameter mapping is required, so a limited selection is allowed.
+    
+    Default: RandomForestClassifier
+  data_type: STRING
+  min_occurs: 0
+  max_occurs: 1
+  allowed_values:
+  - { type: VALUE, value: '' }
+  - { type: VALUE, value: 'RandomForestClassifier' }
